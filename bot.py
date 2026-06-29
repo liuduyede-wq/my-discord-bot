@@ -5,6 +5,8 @@ import asyncio
 from datetime import datetime, timedelta
 import os
 from dotenv import load_dotenv
+from flask import Flask
+from threading import Thread
 
 # .envファイルからトークンを読み込む
 load_dotenv()
@@ -147,5 +149,17 @@ async def alert_1(interaction: discord.Interaction, status: app_commands.Choice[
 @bot.tree.command(name="help", description="コマンド一覧を表示")
 async def help_command(interaction: discord.Interaction):
     await interaction.response.send_message("**✨ ぼくが使えるコマンド一覧 ✨**\n`/at_time` `/in_time` ･･･ タイマーセット\n`/check` ･･･ 予定の確認\n`/cancel` ･･･ キャンセル\n`/alert_5` `/alert_1` ･･･ 通知設定", ephemeral=True)
+
+app = Flask(__name__)
+@app.route('/')
+def home():
+    return "Bot is running!"
+
+def run_web():
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 8080)))
+
+# スレッドとしてWebサーバーを起動
+Thread(target=run_web).start()
+# --- ここまで追加 ---
 
 bot.run(os.getenv('DISCORD_TOKEN'))

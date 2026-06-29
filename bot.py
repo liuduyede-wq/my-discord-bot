@@ -148,7 +148,17 @@ async def alert_1(interaction: discord.Interaction, status: app_commands.Choice[
 
 @bot.tree.command(name="help", description="コマンド一覧を表示")
 async def help_command(interaction: discord.Interaction):
-    await interaction.response.send_message("**✨ ぼくが使えるコマンド一覧 ✨**\n`/at_time` `/in_time` ･･･ タイマーセット\n`/check` ･･･ 予定の確認\n`/cancel` ･･･ キャンセル\n`/alert_5` `/alert_1` ･･･ 通知設定", ephemeral=True)
+    await interaction.response.send_message("**✨ ぼくが使えるコマンド一覧 ✨**\n\n"
+        "⏰ **タイマーのセット**\n"
+        "`/at_time` ･･･ 指定した時刻（例：23:30）にばいばいするよ！\n"
+        "`/in_time` ･･･ 指定した時間（分）のあとにばいばいするよ！\n\n"
+        "🔍 **かくにん・キャンセル**\n"
+        "`/check` ･･･ 今セットされている予定を確認するよ！\n"
+        "`/cancel` ･･･ セットしたばいばいの予定をとりやめるよ！\n\n"
+        "🔔 **通知のオン・オフ**\n"
+        "`/alert_5` ･･･ 5分前通知のON/OFFを選べるよ！\n"
+        "`/alert_1` ･･･ 1分前通知のON/OFFを選べるよ！\n\n"
+        "`/help` ･･･ 今見ているこのメッセージを表示するよ！", ephemeral=True)
 
 app = Flask(__name__)
 @app.route('/')

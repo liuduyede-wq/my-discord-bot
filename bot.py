@@ -44,38 +44,54 @@ async def on_ready():
 
 @bot.event
 async def on_voice_state_update(member, before, after):
+    # 手動で通話から出た時にタイマーをキャンセルする
     if before.channel is not None and after.channel is None:
         if member.id in active_timers:
             active_timers[member.id]["task"].cancel()
 
 async def wait_and_disconnect(interaction: discord.Interaction, total_seconds: float, end_message: str):
     user_id = interaction.user.id
+    guild = interaction.guild # サーバーの情報を取得
     settings = get_user_settings(user_id)
+    
     try:
         target_time = datetime.now() + timedelta(seconds=total_seconds)
-        if total_seconds > 300:
-            await asyncio.sleep(total_seconds - 300)
-            if settings["alert_5"] and interaction.user.voice:
-                await interaction.followup.send(f"{interaction.user.mention} あと5分でばいばいの時間だよ！準備して！")
         
+        # 5分前通知（5分ぴったりの場合も対応するため >= に変更）
+        if total_seconds >= 300:
+            await asyncio.sleep(total_seconds - 300)
+            # 時間が経ったあとに「今の状態」を取り直す
+            member = guild.get_member(user_id)
+            # interaction.channel.send に変更（15分の壁突破）、.display_name でメンションなし
+            if settings["alert_5"] and member and member.voice:
+                await interaction.channel.send(f"{member.display_name} あと5分でばいばいの時間だよ！準備して！")
+        
+        # 1分前通知
         now = datetime.now()
         remaining = (target_time - now).total_seconds()
         if remaining > 60:
             await asyncio.sleep(remaining - 60)
-            if settings["alert_1"] and interaction.user.voice:
-                await interaction.followup.send(f"{interaction.user.mention} あと1分でばいばいの時間だよ！みんなにばいばいして！")
+            member = guild.get_member(user_id)
+            if settings["alert_1"] and member and member.voice:
+                await interaction.channel.send(f"{member.display_name} あと1分でばいばいの時間だよ！みんなにばいばいして！")
 
+        # 切断時間まで待機
         now = datetime.now()
         remaining = (target_time - now).total_seconds()
-        if remaining > 0: await asyncio.sleep(remaining)
+        if remaining > 0: 
+            await asyncio.sleep(remaining)
             
-        if interaction.user.voice:
-            await interaction.user.move_to(None)
-            await interaction.followup.send(f"{interaction.user.mention} {end_message}")
+        # 切断する直前にも「今の状態」を取り直す
+        member = guild.get_member(user_id)
+        if member and member.voice:
+            await member.move_to(None) # ここで通話から切断！
+            await interaction.channel.send(f"{member.display_name} {end_message}")
+            
     except asyncio.CancelledError:
         pass
     finally:
-        if user_id in active_timers: del active_timers[user_id]
+        if user_id in active_timers: 
+            del active_timers[user_id]
 
 @bot.tree.command(name="at_time", description="指定した時刻に自動で通話を切断します")
 @app_commands.describe(time_input="「23:30」のように入力")
@@ -148,7 +164,8 @@ async def alert_1(interaction: discord.Interaction, status: app_commands.Choice[
 
 @bot.tree.command(name="help", description="コマンド一覧を表示")
 async def help_command(interaction: discord.Interaction):
-    await interaction.response.send_message("**✨ ぼくが使えるコマンド一覧 ✨**\n\n"
+    help_text = (
+        "**✨ ぼくが使えるコマンド一覧 ✨**\n\n"
         "⏰ **タイマーのセット**\n"
         "`/at_time` ･･･ 指定した時刻（例：23:30）にばいばいするよ！\n"
         "`/in_time` ･･･ 指定した時間（分）のあとにばいばいするよ！\n\n"
@@ -158,8 +175,11 @@ async def help_command(interaction: discord.Interaction):
         "🔔 **通知のオン・オフ**\n"
         "`/alert_5` ･･･ 5分前通知のON/OFFを選べるよ！\n"
         "`/alert_1` ･･･ 1分前通知のON/OFFを選べるよ！\n\n"
-        "`/help` ･･･ 今見ているこのメッセージを表示するよ！", ephemeral=True)
+        "`/help` ･･･ 今見ているこのメッセージを表示するよ！"
+    )
+    await interaction.response.send_message(help_text, ephemeral=True)
 
+# --- Render(無料枠)で動かすためのWebサーバー設定 ---
 app = Flask(__name__)
 @app.route('/')
 def home():
@@ -170,6 +190,6 @@ def run_web():
 
 # スレッドとしてWebサーバーを起動
 Thread(target=run_web).start()
-# --- ここまで追加 ---
+# ------------------------------------------------
 
 bot.run(os.getenv('DISCORD_TOKEN'))

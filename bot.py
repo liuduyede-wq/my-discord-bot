@@ -90,12 +90,15 @@ async def wait_and_disconnect(interaction: discord.Interaction, total_seconds: f
             await asyncio.sleep(remaining)
             
         # 切断する直前に「今の状態」を取り直す
+        # 切断する直前に「今の状態」を取り直す
         member = guild.get_member(user_id)
         if member and member.voice:
-            await member.move_to(None) # ここで通話から切断！
-            # 退出時アラートがONの場合のみ、チャットにメッセージを送信する
+            # ⭕️先にメッセージを送る！
             if settings["alert_disconnect"]:
                 await interaction.channel.send(f"{member.display_name} {end_message}")
+            
+            # ⭕️メッセージを送り終わってから、通話を切断する！
+            await member.move_to(None)
             
     except asyncio.CancelledError:
         pass
